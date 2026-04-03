@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/Babu_/Downloads/tracker-piel.html -->
+<!-- saved from url=(0052)file:///C:/Users/Babu_/Downloads/tracker-piel_1.html -->
 <html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -435,7 +435,7 @@
   <div id="formView">
 
     <p class="section-label">nuevo registro</p>
-    <div class="datetime-chip" id="nowChip">viernes, 3 de abril · 19:18</div>
+    <div class="datetime-chip" id="nowChip">viernes, 3 de abril · 19:56</div>
 
     <!-- 1. Alimentos -->
     <div class="field">
@@ -552,9 +552,18 @@
       </div>
     </div>
 
-    <!-- 11. Otros -->
+    <!-- 11. Cigarros -->
     <div class="field">
-      <label><span class="num">11</span> Otros / notas libres</label>
+      <label><span class="num">11</span> Cigarros</label>
+      <div class="slider-wrap" style="display:flex;align-items:center;gap:16px;">
+        <input type="number" id="f_cigarros" min="0" max="99" value="0" style="width:70px;background:none;border:none;font-family:&#39;DM Serif Display&#39;,serif;font-size:32px;color:var(--accent);text-align:center;outline:none;padding:0;">
+        <span style="color:var(--text3);font-size:12px;">cigarros hoy</span>
+      </div>
+    </div>
+
+    <!-- 12. Otros -->
+    <div class="field">
+      <label><span class="num">12</span> Otros / notas libres</label>
       <textarea id="f_otros" placeholder="cualquier otra observación relevante..."></textarea>
     </div>
 
@@ -645,6 +654,7 @@ async function saveEntry() {
     rojez: document.getElementById('f_rojez').value,
     inflamacion: document.getElementById('f_inflamacion').value,
     eccemas: document.getElementById('f_eccemas').value,
+    cigarros: document.getElementById('f_cigarros').value,
     otros: document.getElementById('f_otros').value.trim(),
   };
 
@@ -685,6 +695,7 @@ function resetForm() {
   });
   document.getElementById('f_felicidad').value = 5;
   document.getElementById('v_felicidad').textContent = '5';
+  document.getElementById('f_cigarros').value = 0;
 }
 
 function showToast(msg) {
@@ -772,6 +783,10 @@ function renderHistory() {
           <div class="val">${e.eccemas}/10</div>
           ${scoreDots(e.eccemas, 'bad')}
         </div>
+        <div class="entry-item">
+          <div class="key">Cigarros</div>
+          <div class="val">${e.cigarros||0}</div>
+        </div>
         ${e.otros ? `<div class="entry-item full"><div class="key">Otros</div><div class="val" style="font-size:13px">${e.otros}</div></div>` : ''}
       </div>
     </div>
@@ -788,9 +803,9 @@ function deleteEntry(id) {
 function exportCSV() {
   const entries = getEntries();
   if (!entries.length) { alert('No hay registros para exportar.'); return; }
-  const headers = ['Fecha','Hora','Alimentos','Sol','Estrés','Ducha','Actividad','Felicidad','Picor','Rojez','Inflamación','Eccemas','Otros'];
+  const headers = ['Fecha','Hora','Alimentos','Sol','Estrés','Ducha','Actividad','Felicidad','Picor','Rojez','Inflamación','Eccemas','Cigarros','Otros'];
   const rows = entries.map(e => [
-    e.fecha, e.hora, `"${e.alimentos}"`, e.sol, e.estres, e.ducha, e.actividad, e.felicidad, e.picor, e.rojez, e.inflamacion, e.eccemas, `"${e.otros}"`
+    e.fecha, e.hora, `"${e.alimentos}"`, e.sol, e.estres, e.ducha, e.actividad, e.felicidad, e.picor, e.rojez, e.inflamacion, e.eccemas, e.cigarros||0, `"${e.otros}"`
   ].join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' });
