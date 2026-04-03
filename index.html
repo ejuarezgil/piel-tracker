@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0052)file:///C:/Users/Babu_/Downloads/tracker-piel_1.html -->
+<!-- saved from url=(0052)file:///C:/Users/Babu_/Downloads/tracker-piel_2.html -->
 <html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -435,7 +435,7 @@
   <div id="formView">
 
     <p class="section-label">nuevo registro</p>
-    <div class="datetime-chip" id="nowChip">viernes, 3 de abril · 19:56</div>
+    <div class="datetime-chip" id="nowChip">viernes, 3 de abril · 20:16</div>
 
     <!-- 1. Alimentos -->
     <div class="field">
@@ -644,6 +644,7 @@ async function saveEntry() {
     fecha: now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' }),
     hora: now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }),
     iso: now.toISOString(),
+    ubicacion: 'Obteniendo...',
     alimentos: document.getElementById('f_alimentos').value.trim(),
     sol: document.getElementById('f_sol').value,
     estres: document.getElementById('f_estres').value,
@@ -658,17 +659,48 @@ async function saveEntry() {
     otros: document.getElementById('f_otros').value.trim(),
   };
 
-  // Guardar localmente siempre
+  const btn = document.querySelector('.submit-btn');
+  btn.textContent = 'OBTENIENDO UBICACION...';
+  btn.disabled = true;
+
+  // Geolocalización
+  try {
+    if (navigator.geolocation) {
+      await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude.toFixed(5);
+            const lon = pos.coords.longitude.toFixed(5);
+            try {
+              const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+              const geo = await r.json();
+              const addr = geo.address;
+              entry.ubicacion = addr.village || addr.town || addr.city || addr.municipality || `${lat},${lon}`;
+              if (addr.state) entry.ubicacion += ', ' + addr.state;
+            } catch(e) {
+              entry.ubicacion = `${lat},${lon}`;
+            }
+            resolve();
+          },
+          () => { entry.ubicacion = 'No disponible'; resolve(); },
+          { timeout: 6000 }
+        );
+      });
+    } else {
+      entry.ubicacion = 'No soportado';
+    }
+  } catch(e) {
+    entry.ubicacion = 'Error';
+  }
+
+  // Guardar localmente
   const entries = getEntries();
   entries.unshift(entry);
   saveEntries(entries);
   resetForm();
 
   // Enviar a Google Sheets
-  const btn = document.querySelector('.submit-btn');
   btn.textContent = 'ENVIANDO...';
-  btn.disabled = true;
-
   try {
     await fetch(SHEETS_URL, {
       method: 'POST',
@@ -678,7 +710,7 @@ async function saveEntry() {
     });
     showToast('✓ Guardado y enviado a Google Sheets');
   } catch(err) {
-    showToast('✓ Guardado local (sin conexión)');
+    showToast('✓ Guardado local (sin conexion)');
   } finally {
     btn.textContent = 'GUARDAR REGISTRO';
     btn.disabled = false;
@@ -734,6 +766,7 @@ function renderHistory() {
         <div>
           <div class="entry-date">${e.fecha}</div>
           <div class="entry-time">${e.hora}</div>
+          ${e.ubicacion && e.ubicacion !== 'No disponible' ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">📍 ${e.ubicacion}</div>` : ''}
         </div>
         <button class="btn-delete" onclick="deleteEntry(${e.id})">borrar</button>
       </div>
@@ -803,9 +836,9 @@ function deleteEntry(id) {
 function exportCSV() {
   const entries = getEntries();
   if (!entries.length) { alert('No hay registros para exportar.'); return; }
-  const headers = ['Fecha','Hora','Alimentos','Sol','Estrés','Ducha','Actividad','Felicidad','Picor','Rojez','Inflamación','Eccemas','Cigarros','Otros'];
+  const headers = ['Ubicacion','Fecha','Hora','Alimentos','Sol','Estrés','Ducha','Actividad','Felicidad','Picor','Rojez','Inflamación','Eccemas','Cigarros','Otros'];
   const rows = entries.map(e => [
-    e.fecha, e.hora, `"${e.alimentos}"`, e.sol, e.estres, e.ducha, e.actividad, e.felicidad, e.picor, e.rojez, e.inflamacion, e.eccemas, e.cigarros||0, `"${e.otros}"`
+    `"${e.ubicacion||''}"`, e.fecha, e.hora, `"${e.alimentos}"`, e.sol, e.estres, e.ducha, e.actividad, e.felicidad, e.picor, e.rojez, e.inflamacion, e.eccemas, e.cigarros||0, `"${e.otros}"`
   ].join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' });
